@@ -1,24 +1,28 @@
 import express from 'express'
 import 'dotenv/config.js'
 import pool from './Config/db.js'
-import jwt from 'jsonwebtoken';
-import cookieParser from 'cookie-parser';
+import jwt from 'jsonwebtoken'
+import cookieParser from 'cookie-parser'
 import cors from 'cors'
-import path from 'path'
-import { fileURLToPath } from 'url'
 
 let app = express()
 
+// 1. Cross-Domain Access Fix
 app.use(
   cors({
-    origin: true,
-    credentials: true,
+    origin: process.env.FRONTEND_URL || true, // Frontend ka Vercel URL
+    credentials: true, // Cookies transfer karne ke liye zaroori hai
   })
 )
+
 app.use(express.json())
 app.use(cookieParser())
 
-// Routes
+// Test Route (Pata chal sake backend chal raha hai ya nahi)
+app.get('/', (req, res) => {
+  res.send({ status: 'success', message: 'Backend Server Working Fine!' })
+})
+
 app.post('/signup', async (req, res) => {
   let { user_name, password, email } = req.body
   if (
@@ -31,37 +35,40 @@ app.post('/signup', async (req, res) => {
   ) {
     return res.status(400).send({
       status: 'Error',
-      msg: 'Required parameters are missing or invalid'
+      msg: 'Required parameters are missing or invalid',
     })
   }
 
   try {
     let result = await pool.query(
-      `INSERT INTO users (name, email, password) VALUES($1, $2, $3) RETURNING id, name, email`, 
+      `INSERT INTO users (name, email, password) VALUES($1, $2, $3) RETURNING id, name, email`,
       [user_name, email, password]
     )
     let current_user = result.rows[0]
-    let userToken = jwt.sign({ current_user }, 'topsecret');
+    let userToken = jwt.sign({ current_user }, 'topsecret')
+
+    // Cross-site cookie (Alag domains hone par sameSite: 'none' zaroori hota hai)
     res.cookie('Token', userToken, {
       httpOnly: true,
       secure: true,
-      sameSite: 'none'
+      sameSite: 'none',
     })
+
     res.send({
       status: 'success',
       msg: 'User Insert Successfully',
-      user: current_user
+      user: current_user,
     })
   } catch (error) {
     if (error.code === '23505') {
       return res.status(409).send({
-        "status": "Error",
-        "msg": "Email already exists"
+        status: 'Error',
+        msg: 'Email already exists',
       })
     }
     return res.status(500).send({
       status: 'Error',
-      msg: 'Something went wrong'
+      msg: 'Something went wrong',
     })
   }
 })
@@ -76,35 +83,44 @@ app.post('/login', async (req, res) => {
   ) {
     return res.status(400).send({
       status: 'Error',
-      msg: 'Required parameters are missing or invalid'
+      msg: 'Required parameters are missing or invalid',
     })
   }
 
   try {
-    const result = await pool.query(`SELECT * FROM users WHERE email = $1`, [ email ])
-    if(result.rows.length === 0){
-      return res.status(401).send({status:'error', msg:'Email does not exist'})
+    const result = await pool.query(`SELECT * FROM users WHERE email = $1`, [
+      email,
+    ])
+    if (result.rows.length === 0) {
+      return res
+        .status(401)
+        .send({ status: 'error', msg: 'Email does not exist' })
     }
-    if(result.rows[0].password !== password){
-      return res.status(401).send({status:'error', msg:'Password did not match'})
+    if (result.rows[0].password !== password) {
+      return res
+        .status(401)
+        .send({ status: 'error', msg: 'Password did not match' })
     }
     let current_user = result.rows[0]
     delete current_user.password
-    let userToken = jwt.sign({ current_user }, 'topsecret');
+    let userToken = jwt.sign({ current_user }, 'topsecret')
+
+    // Cross-site cookie fix
     res.cookie('Token', userToken, {
       httpOnly: true,
       secure: true,
-      sameSite: 'none'
+      sameSite: 'none',
     })
+
     return res.send({
       status: 'success',
       message: 'Login Successful',
-      user: current_user
+      user: current_user,
     })
   } catch (error) {
     return res.status(500).send({
       status: 'Error',
-      message: 'Something went wrong'
+      message: 'Something went wrong',
     })
   }
 })
@@ -115,7 +131,7 @@ app.get('/me', (req, res) => {
   if (!token) {
     return res.status(401).send({
       status: 'error',
-      message: 'Unauthorized'
+      message: 'Unauthorized',
     })
   }
 
@@ -124,39 +140,27 @@ app.get('/me', (req, res) => {
 
     return res.send({
       status: 'success',
-      user: user.current_user
+      user: user.current_user,
     })
   } catch (error) {
     return res.status(401).send({
       status: 'error',
-      message: 'Invalid or expired token'
+      message: 'Invalid or expired token',
     })
   }
 })
 
 app.post('/logout', (req, res) => {
-  res.clearCookie('Token')
+  res.clearCookie('Token', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+  })
 
   return res.send({
     status: 'success',
-    message: 'Logout successful'
+    message: 'Logout successful',
   })
 })
-
-// Static Hosting Code (Uncommented and Working)
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
-app.use(express.static(path.join(__dirname, 'web/dist')))
-
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'web/dist', 'index.html'))
-})
-
-// if (process.env.NODE_ENV !== 'production') {
-//   app.listen(8000, () => {
-//     console.log('Website running at http://localhost:8000')
-//   })
-// }
 
 export default app
