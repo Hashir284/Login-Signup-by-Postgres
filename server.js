@@ -3,40 +3,17 @@ import 'dotenv/config.js'
 import pool from './Config/db.js'
 import jwt from 'jsonwebtoken'
 import cookieParser from 'cookie-parser'
+import cors from 'cors'
 
 let app = express()
 
-// Dynamic CORS Header Middleware (Sabse upar rakhein)
-app.use((req, res, next) => {
-  const allowedOrigins = [
-    'https://login-signup-by-postgres-front.vercel.app',
-    'http://localhost:5173',
-    'http://localhost:3000'
-  ]
-  const origin = req.headers.origin
-
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin)
-  } else {
-    res.setHeader('Access-Control-Allow-Origin', 'https://login-signup-by-postgres-front.vercel.app')
-  }
-
-  res.setHeader('Access-Control-Allow-Credentials', 'true')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
-
-  // Browser ki OPTIONS (Preflight) request ko turant 200 OK response bhejein
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end()
-  }
-
-  next()
-})
+// 1. Cross-Domain Access Fix
+app.use(cors({ origin: ["http://localhost:3000", "https://login-signup-by-postgres-front.vercel.app"], credentials: true }))
 
 app.use(express.json())
 app.use(cookieParser())
 
-// Test Route
+// Test Route (Pata chal sake backend chal raha hai ya nahi)
 app.get('/', (req, res) => {
   res.send({ status: 'success', message: 'Backend Server Working Fine!' })
 })
@@ -65,17 +42,16 @@ app.post('/signup', async (req, res) => {
     let current_user = result.rows[0]
     let userToken = jwt.sign({ current_user }, 'topsecret')
 
+    // Cross-site cookie (Alag domains hone par sameSite: 'none' zaroori hota hai)
     res.cookie('Token', userToken, {
       httpOnly: true,
-      // secure: true,
-      
-      // sameSite: 'none',
-      
+      secure: true,
+      sameSite: 'none',
     })
 
     res.send({
       status: 'success',
-      msg: 'User Inserted Successfully',
+      msg: 'User Insert Successfully',
       user: current_user,
     })
   } catch (error) {
@@ -87,7 +63,7 @@ app.post('/signup', async (req, res) => {
     }
     return res.status(500).send({
       status: 'Error',
-      msg: error.message || 'Something went wrong',
+      msg: 'Something went wrong',
     })
   }
 })
@@ -124,10 +100,11 @@ app.post('/login', async (req, res) => {
     delete current_user.password
     let userToken = jwt.sign({ current_user }, 'topsecret')
 
+    // Cross-site cookie fix
     res.cookie('Token', userToken, {
       httpOnly: true,
-      // secure: true,
-      // sameSite: 'none',
+      secure: true,
+      sameSite: 'none',
     })
 
     return res.send({
@@ -138,7 +115,7 @@ app.post('/login', async (req, res) => {
   } catch (error) {
     return res.status(500).send({
       status: 'Error',
-      message: error.message || 'Something went wrong',
+      message: 'Something went wrong',
     })
   }
 })
@@ -171,8 +148,8 @@ app.get('/me', (req, res) => {
 app.post('/logout', (req, res) => {
   res.clearCookie('Token', {
     httpOnly: true,
-    // secure: true,
-    // sameSite: 'none',
+    secure: true,
+    sameSite: 'none',
   })
 
   return res.send({
