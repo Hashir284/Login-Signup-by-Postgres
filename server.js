@@ -7,33 +7,24 @@ import cors from 'cors'
 
 let app = express()
 
-// Allowed Origins List
-const allowedOrigins = [
-  'https://login-signup-by-postgres-front.vercel.app',
-  'http://localhost:5173',
-  'http://localhost:3000'
-]
+const allowedOrigin = 'https://login-signup-by-postgres-front.vercel.app'
 
+// 1. Explicit CORS setup
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // Postman ya bina origin wale requests aur allowed list ko allow karta hai
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true)
-      } else {
-        callback(null, true) // Vercel preview deployments ke liye bhi safe dynamic origin
-      }
-    },
-    credentials: true, // Cross-domain cookie ke liye zaroori hai
+    origin: allowedOrigin,
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 )
+
+// 2. Preflight (OPTIONS) requests handler
+app.options('*', cors())
 
 app.use(express.json())
 app.use(cookieParser())
 
-// Test Route
 app.get('/', (req, res) => {
   res.send({ status: 'success', message: 'Backend Server Working Fine!' })
 })
