@@ -51,7 +51,8 @@ app.post('/signup', async (req, res) => {
         res.cookie('Token', userToken, {
             // maxAge: 86400000, // 1 day
             httpOnly: true,
-            secure: true
+            secure: true,
+            sameSite: 'lax'
         })
         res.send({
             status: 'success',
@@ -104,7 +105,8 @@ app.post('/login', async(req, res)=>{
         res.cookie('Token', userToken, {
             // maxAge: 86400000, // 1 day
             httpOnly: true,
-            secure: true
+            secure: true,
+            sameSite: 'lax'
         })
         return res.send({
             status: 'success',
