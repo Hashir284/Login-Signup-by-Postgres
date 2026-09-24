@@ -18,7 +18,7 @@ app.use(
 app.use(express.json())
 app.use(cookieParser())
 
-// Test Route (Pata chal sake backend chal raha hai ya nahi)
+// Test Route
 app.get('/', (req, res) => {
   res.send({ status: 'success', message: 'Backend Server Working Fine!' })
 })
@@ -47,10 +47,11 @@ app.post('/signup', async (req, res) => {
     let current_user = result.rows[0]
     let userToken = jwt.sign({ current_user }, 'topsecret')
 
-    // Cross-site cookie (Alag domains hone par sameSite: 'none' zaroori hota hai)
+    // FIX: sameSite: 'none' add kar diya hai cross-domain cookies ke liye
     res.cookie('Token', userToken, {
       httpOnly: true,
       secure: true,
+      sameSite: 'none',
     })
 
     res.send({
@@ -104,10 +105,11 @@ app.post('/login', async (req, res) => {
     delete current_user.password
     let userToken = jwt.sign({ current_user }, 'topsecret')
 
-    // Cross-site cookie fix
+    // FIX: sameSite: 'none' add kar diya hai
     res.cookie('Token', userToken, {
       httpOnly: true,
       secure: true,
+      sameSite: 'none',
     })
 
     return res.send({
@@ -149,9 +151,11 @@ app.get('/me', (req, res) => {
 })
 
 app.post('/logout', (req, res) => {
+  // FIX: clearCookie me bhi same options zaroori hain
   res.clearCookie('Token', {
     httpOnly: true,
     secure: true,
+    sameSite: 'none',
   })
 
   return res.send({
