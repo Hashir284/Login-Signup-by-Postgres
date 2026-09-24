@@ -7,11 +7,14 @@ import cors from 'cors'
 
 let app = express()
 
-// 1. Cross-Domain Access Fix
+// 1. CORS Fix: origin function use karke exact requesting domain ko allow karein
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || true, // Frontend ka Vercel URL
-    credentials: true, // Cookies transfer karne ke liye zaroori hai
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, postman, etc.) or match frontend
+      callback(null, origin || true)
+    },
+    credentials: true, // Cookies cross-domain ke liye zaroori hai
   })
 )
 
@@ -47,7 +50,6 @@ app.post('/signup', async (req, res) => {
     let current_user = result.rows[0]
     let userToken = jwt.sign({ current_user }, 'topsecret')
 
-    // FIX: sameSite: 'none' add kar diya hai cross-domain cookies ke liye
     res.cookie('Token', userToken, {
       httpOnly: true,
       secure: true,
@@ -56,10 +58,11 @@ app.post('/signup', async (req, res) => {
 
     res.send({
       status: 'success',
-      msg: 'User Insert Successfully',
+      msg: 'User Inserted Successfully',
       user: current_user,
     })
   } catch (error) {
+    console.error('Signup Error:', error) // Error log check karne ke liye
     if (error.code === '23505') {
       return res.status(409).send({
         status: 'Error',
@@ -68,7 +71,7 @@ app.post('/signup', async (req, res) => {
     }
     return res.status(500).send({
       status: 'Error',
-      msg: 'Something went wrong',
+      msg: error.message || 'Something went wrong',
     })
   }
 })
@@ -105,7 +108,6 @@ app.post('/login', async (req, res) => {
     delete current_user.password
     let userToken = jwt.sign({ current_user }, 'topsecret')
 
-    // FIX: sameSite: 'none' add kar diya hai
     res.cookie('Token', userToken, {
       httpOnly: true,
       secure: true,
@@ -118,9 +120,10 @@ app.post('/login', async (req, res) => {
       user: current_user,
     })
   } catch (error) {
+    console.error('Login Error:', error)
     return res.status(500).send({
       status: 'Error',
-      message: 'Something went wrong',
+      message: error.message || 'Something went wrong',
     })
   }
 })
@@ -151,7 +154,6 @@ app.get('/me', (req, res) => {
 })
 
 app.post('/logout', (req, res) => {
-  // FIX: clearCookie me bhi same options zaroori hain
   res.clearCookie('Token', {
     httpOnly: true,
     secure: true,
