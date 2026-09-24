@@ -155,6 +155,8 @@ app.post('/logout', (req, res) => {
     })
 })
 
+export default app
+
 //static hosting
 // const __filename = fileURLToPath(import.meta.url)
 // const __dirname = path.dirname(__filename)
