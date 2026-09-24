@@ -3,28 +3,40 @@ import 'dotenv/config.js'
 import pool from './Config/db.js'
 import jwt from 'jsonwebtoken'
 import cookieParser from 'cookie-parser'
-import cors from 'cors'
 
 let app = express()
 
-const allowedOrigin = 'https://login-signup-by-postgres-front.vercel.app'
+// Dynamic CORS Header Middleware (Sabse upar rakhein)
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    'https://login-signup-by-postgres-front.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000'
+  ]
+  const origin = req.headers.origin
 
-// 1. Explicit CORS setup
-app.use(
-  cors({
-    origin: allowedOrigin,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-)
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', 'https://login-signup-by-postgres-front.vercel.app')
+  }
 
-// 2. Preflight (OPTIONS) requests handler
-app.options('*', cors())
+  res.setHeader('Access-Control-Allow-Credentials', 'true')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+
+  // Browser ki OPTIONS (Preflight) request ko turant 200 OK response bhejein
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end()
+  }
+
+  next()
+})
 
 app.use(express.json())
 app.use(cookieParser())
 
+// Test Route
 app.get('/', (req, res) => {
   res.send({ status: 'success', message: 'Backend Server Working Fine!' })
 })
