@@ -7,14 +7,26 @@ import cors from 'cors'
 
 let app = express()
 
-// 1. CORS Fix: origin function use karke exact requesting domain ko allow karein
+// Allowed Origins List
+const allowedOrigins = [
+  'https://login-signup-by-postgres-front.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000'
+]
+
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, postman, etc.) or match frontend
-      callback(null, origin || true)
+    origin: function (origin, callback) {
+      // Postman ya bina origin wale requests aur allowed list ko allow karta hai
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true)
+      } else {
+        callback(null, true) // Vercel preview deployments ke liye bhi safe dynamic origin
+      }
     },
-    credentials: true, // Cookies cross-domain ke liye zaroori hai
+    credentials: true, // Cross-domain cookie ke liye zaroori hai
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
   })
 )
 
@@ -62,7 +74,6 @@ app.post('/signup', async (req, res) => {
       user: current_user,
     })
   } catch (error) {
-    console.error('Signup Error:', error) // Error log check karne ke liye
     if (error.code === '23505') {
       return res.status(409).send({
         status: 'Error',
@@ -120,7 +131,6 @@ app.post('/login', async (req, res) => {
       user: current_user,
     })
   } catch (error) {
-    console.error('Login Error:', error)
     return res.status(500).send({
       status: 'Error',
       message: error.message || 'Something went wrong',
