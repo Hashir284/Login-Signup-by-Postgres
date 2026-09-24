@@ -67,8 +67,10 @@ app.post('/signup', async (req, res) => {
 
     res.cookie('Token', userToken, {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
+      // secure: true,
+      
+      // sameSite: 'none',
+      
     })
 
     res.send({
@@ -124,8 +126,8 @@ app.post('/login', async (req, res) => {
 
     res.cookie('Token', userToken, {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
+      // secure: true,
+      // sameSite: 'none',
     })
 
     return res.send({
@@ -169,8 +171,8 @@ app.get('/me', (req, res) => {
 app.post('/logout', (req, res) => {
   res.clearCookie('Token', {
     httpOnly: true,
-    secure: true,
-    sameSite: 'none',
+    // secure: true,
+    // sameSite: 'none',
   })
 
   return res.send({
